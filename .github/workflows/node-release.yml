@@ -301,7 +301,9 @@ jobs:
           node-version: 18
 
       - name: npm ci
-        run: npm ci --ignore-scripts
+        run: |
+          rm -r node_modules
+          npm ci --ignore-scripts
 
       - name: Publish ARM Release to Github
         env:
