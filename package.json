@@ -1,15 +1,13 @@
 {
   "name": "@acalcutt/maplibre-gl-native-test",
-  "version": "5.0.2-pre.3",
+  "version": "5.0.2-pre.2",
   "description": "Renders map tiles with Maplibre GL",
   "keywords": [
     "maplibre",
     "gl"
   ],
   "directories": {
-    "include": "include",
-    "src": "src",
-    "vendor": "vendor"
+    "lib": "lib"
   },
   "files": [
     "lib",
@@ -59,11 +57,19 @@
     "node": ">=6"
   },
   "scripts": {
-    "install": "cmake-js compile",
+    "install": "node-pre-gyp install --fallback-to-build=true",
     "test": "tape platform/node/test/js/**/*.test.js",
     "test-memory": "node --expose-gc platform/node/test/memory.test.js",
     "test-expressions": "node -r esm platform/node/test/expression.test.js",
     "test-render": "node -r esm platform/node/test/render.test.js",
     "test-query": "node -r esm platform/node/test/query.test.js"
+  },
+  "gypfile": true,
+  "binary": {
+    "module_name": "mbgl",
+    "module_path": "./lib/{node_abi}",
+    "host": "https://github.com/wifidb/maplibre-gl-native/releases/download/",
+    "remote_path": "node-v{version}",
+    "package_name": "{node_abi}-{platform}-{arch}-{configuration}.tar.gz"
   }
 }
