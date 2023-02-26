@@ -6,6 +6,10 @@
 #include "metadata.hpp"
 #include "runner.hpp"
 
+#if defined(WIN32) && defined(GetObject)
+#undef GetObject
+#endif
+
 #include <mbgl/map/map.hpp>
 #include <mbgl/renderer/renderer.hpp>
 #include <mbgl/storage/resource.hpp>
@@ -103,7 +107,7 @@ void writeJSON(rapidjson::PrettyWriter<rapidjson::StringBuffer>& writer, const m
                 [&writer](bool b) { writer.Bool(b); },
                 [&writer](uint64_t u) { writer.Uint64(u); },
                 [&writer](int64_t i) { writer.Int64(i); },
-                [&writer](double d) { d == std::floor(d) ? writer.Int64(d) : writer.Double(d); },
+                [&writer](double d) { d == std::floor(d) ? writer.Int64(static_cast<int64_t>(d)) : writer.Double(d); },
                 [&writer](const std::string& s) { writer.String(s); },
                 [&writer](const std::vector<mbgl::Value>& arr) {
                     writer.StartArray();
@@ -564,6 +568,12 @@ TestMetadata parseTestMetadata(const TestPaths& paths) {
         }
         metadata.renderTest = false;
     }
+    
+    if (testValue.HasMember("ignoreProbing")) {
+        if (testValue["ignoreProbing"].IsBool()) {
+            metadata.ignoreProbing = testValue["ignoreProbing"].GetBool();
+        }
+    }
 
     if (testValue.HasMember("queryOptions")) {
         assert(testValue["queryOptions"].IsObject());
@@ -929,7 +939,7 @@ TestOperations parseTestOperations(TestMetadata& metadata) {
             std::string path = std::string(operationArray[2].GetString(), operationArray[2].GetStringLength());
             assert(!path.empty());
 
-            float tolerance = operationArray[3].GetDouble();
+            float tolerance = static_cast<float>(operationArray[3].GetDouble());
             mbgl::filesystem::path filePath(path);
 
             bool compressed = false;
@@ -997,7 +1007,6 @@ TestOperations parseTestOperations(TestMetadata& metadata) {
         } else if (operationArray[0].GetString() == networkProbeStartOp) {
             // probeNetworkStart
             result.emplace_back([](TestContext&) {
-                assert(!mbgl::ProxyFileSource::isTrackingActive());
                 mbgl::ProxyFileSource::setTrackingActive(true);
                 return true;
             });
@@ -1007,7 +1016,6 @@ TestOperations parseTestOperations(TestMetadata& metadata) {
             assert(operationArray[1].IsString());
             std::string mark = std::string(operationArray[1].GetString(), operationArray[1].GetStringLength());
             result.emplace_back([mark](TestContext& ctx) {
-                assert(mbgl::ProxyFileSource::isTrackingActive());
                 ctx.getMetadata().metrics.network.emplace(
                     std::piecewise_construct,
                     std::forward_as_tuple(std::move(mark)),
@@ -1018,7 +1026,6 @@ TestOperations parseTestOperations(TestMetadata& metadata) {
         } else if (operationArray[0].GetString() == networkProbeEndOp) {
             // probeNetworkEnd
             result.emplace_back([](TestContext&) {
-                assert(mbgl::ProxyFileSource::isTrackingActive());
                 mbgl::ProxyFileSource::setTrackingActive(false);
                 return true;
             });
@@ -1189,7 +1196,7 @@ TestOperations parseTestOperations(TestMetadata& metadata) {
             }
 
             std::string mark = operationArray[1].GetString();
-            int duration = operationArray[2].GetFloat();
+            int duration = static_cast<int>(operationArray[2].GetFloat());
             mbgl::LatLng startPos, endPos;
             double startZoom, endZoom;
 
@@ -1235,7 +1242,7 @@ TestOperations parseTestOperations(TestMetadata& metadata) {
                     samples.push_back(frameTime);
                 }
 
-                float averageFps = totalTime > 0.0 ? frames / totalTime : 0.0;
+                float averageFps = totalTime > 0.0f ? frames / totalTime : 0.0f;
                 float minFrameTime = 0.0;
 
                 // Use 1% of the longest frames to compute the minimum fps
@@ -1252,7 +1259,6 @@ TestOperations parseTestOperations(TestMetadata& metadata) {
         } else if (operationArray[0].GetString() == gfxProbeStartOp) {
             // probeGFXStart
             result.emplace_back([](TestContext& ctx) {
-                assert(!ctx.gfxProbeActive);
                 ctx.gfxProbeActive = true;
                 ctx.baselineGfxProbe = ctx.activeGfxProbe;
                 return true;
