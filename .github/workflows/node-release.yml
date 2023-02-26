@@ -300,6 +300,7 @@ jobs:
 
       - name: npm ci
         run: |
+          rm -r node_modules
           npm ci --ignore-scripts
 
       - name: Publish ARM Release to Github
