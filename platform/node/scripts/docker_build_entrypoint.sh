@@ -15,6 +15,3 @@ cp -R ./lib/ /data/lib/
 #Test
 xvfb-run --auto-servernum ./build/mbgl-render-test-runner --manifestPath metrics/linux-gcc8-release-style.json
 xvfb-run --auto-servernum npm test
-
-#Cleanup files
-rm -rf node_modules/
